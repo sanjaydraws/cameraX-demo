@@ -3,15 +3,11 @@ package com.example.cameraxapp
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresPermission
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
+import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -20,9 +16,9 @@ import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 
 //add permission in manifest
 //<uses-feature android:name="android.hardware.camera.any" /> // // it makes sure that device has camera
@@ -56,8 +52,7 @@ class MainActivity : AppCompatActivity() {
             takePhoto()
         }
         binding?.cameraSwitch?.setOnClickListener {
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-            
+            flipCamera()
         }
 //        implement the outputDirectory and cameraExecutor
         outputDirectory = getOutputDirectory()
@@ -77,6 +72,35 @@ class MainActivity : AppCompatActivity() {
         return if(mediaDir != null && mediaDir.exists())
             mediaDir else filesDir
     }
+
+//    private fun  saveFileToGallery(){
+//        ///storage/emulated/0/Sample Directory
+//        val file = File(Environment.getExternalStorageDirectory().toString() + "/Sample Directory")
+//        val success = true
+//        if(!file.exists()) {
+//            Toast.makeText(
+//                applicationContext,"Directory does not exist, create it",
+//                Toast.LENGTH_LONG).show();
+//        }
+//        if(success) {
+//            Toast.makeText(
+//                application,"Directory created",
+//                Toast.LENGTH_LONG).show();
+//        }
+//        else {
+//            Toast.makeText(this,"Failed to create Directory",
+//                Toast.LENGTH_LONG).show();
+//        }
+//    }
+//    private fun saveImageToGallery():File{
+//
+//        val values = ContentValues()
+//        values.put(Images.Media.DATE_TAKEN, System.currentTimeMillis())
+//        values.put(Images.Media.MIME_TYPE, "image/jpeg")
+//        values.put(MediaStore.MediaColumns.DATA, filePath)
+//
+//        context.getContentResolver().insert(Images.Media.EXTERNAL_CONTENT_URI, values)
+//    }
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
             baseContext, it) == PackageManager.PERMISSION_GRANTED
@@ -100,6 +124,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
+    private fun flipCamera() {
+        if (lensFacing === CameraSelector.DEFAULT_FRONT_CAMERA)
+            lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
+        else if (lensFacing === CameraSelector.DEFAULT_BACK_CAMERA)
+            lensFacing = CameraSelector.DEFAULT_FRONT_CAMERA
+        startCamera()
+    }
+
     //Implement Preview use case
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
@@ -118,17 +151,20 @@ class MainActivity : AppCompatActivity() {
 
             imageCapture = ImageCapture.Builder()
                 .build() // use cases
+//            videoCapture = VideoCapture.Builder().build()
+
 
             // Select back camera as a default
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+//            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
 
                 // Bind use cases to camera
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageCapture)
+                cameraProvider.bindToLifecycle(this, lensFacing, preview, imageCapture);
+
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
 
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
