@@ -8,48 +8,105 @@
         android:layout_height="match_parent"
         tools:context=".MainActivity">
 
-        <Button
+        <ImageView
             android:id="@+id/camera_capture_button"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_marginBottom="50dp"
-            android:scaleType="fitCenter"
-            android:text="Take Photo"
-            android:backgroundTint="@color/white"
-            android:background="@drawable/shape_circle"
-            android:gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_ring"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-             />
-        <Button
-            android:id="@+id/camera_switch"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_marginBottom="50dp"
-            android:scaleType="fitCenter"
-            android:text="camera switch"
-            android:backgroundTint="@color/white"
-            android:background="@drawable/shape_circle"
-            android:gravity="center"
-            app:layout_constraintStart_toEndOf="@id/camera_capture_button"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:elevation="23dp"
+            android:layout_marginBottom="15dp"
             />
-<!--        <ImageButton-->
-<!--            android:id="@+id/camera_switch"-->
-<!--            android:layout_width="20dp"-->
-<!--            android:layout_height="20dp"-->
-<!--            android:src="@drawable/ic_baseline_flip_camera_android_24"-->
-<!--            app:layout_constraintEnd_toEndOf="parent"-->
-<!--            app:layout_constraintTop_toTopOf="parent"-->
-<!--            android:layout_marginEnd="15dp"-->
-<!--            android:layout_marginTop="15dp"-->
-<!--            />-->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:elevation="23dp"
+            android:background="@drawable/bg_black_900_22dp"
+            android:paddingVertical="14dp"
+            android:layout_marginTop="15dp"
+            android:paddingHorizontal="10dp"
+            android:layout_marginEnd="18dp"
+            >
+
+            <ImageView
+                android:id="@+id/camera_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_flip_camera"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                />
+            <ImageView
+                android:id="@+id/flash"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_flash"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/camera_switch"
+                android:layout_marginTop="20dp"
+                />
+            <ImageView
+                android:id="@+id/multiSnap"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_multiple_image"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/flash"
+                android:layout_marginTop="44dp"
+                />
+            <ImageView
+                android:id="@+id/timer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_timer"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/multiSnap"
+                android:layout_marginTop="20dp"
+                />
+            <ImageView
+                android:id="@+id/focus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_focus"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/timer"
+                android:layout_marginTop="20dp"
+                />
+            <ImageView
+                android:id="@+id/grid"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_grid"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/focus"
+                android:layout_marginTop="20dp"
+                />
+
+            <ImageView
+                android:id="@+id/upperDownArrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/selector_up_down"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/grid"
+                android:layout_marginTop="28dp"
+                />
+            <androidx.constraintlayout.widget.Group
+                android:id="@+id/group"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:constraint_referenced_ids="grid,focus,timer,multiSnap"
+                />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
 
         <androidx.camera.view.PreviewView
-            android:id="@+id/viewFinder"
+            android:id="@+id/viewFinderPreview"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>

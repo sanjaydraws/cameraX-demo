@@ -1,17 +1,23 @@
 package com.example.cameraxapp
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.icu.util.TimeUnit
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import com.example.cameraxapp.databinding.ActivityMainBinding
+import com.example.cameraxapp.util.afterMeasured
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -28,16 +34,77 @@ class MainActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
+    var camera:Camera? = null
     companion object {
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
+
+    //for on focus implementation
+//    val listener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+//        override fun onScale(detector: ScaleGestureDetector): Boolean {
+//            val scale = cameraControl.getZoomRatio.getValue() * detector.getScaleFactor()
+//        }
+//    }
+//    val scaleDetector = ScaleGestureDetector(this, listener)
+//
+//    override fun onTouchEvent(event: MotionEvent?): Boolean {
+//        //  // Let the ScaleGestureDetector inspect all events
+//        scaleDetector.onTouchEvent(event)
+//        return true
+//    }
+
+
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding?.root)
+
+        binding?.apply {
+            upperDownArrow.setOnClickListener {
+                if(upperDownArrow.isSelected){
+                    upperDownArrow.isSelected = false
+                    group.isVisible = true
+                }else{
+                    upperDownArrow.isSelected = true
+                    group.isVisible = false
+                }
+            }
+        }
+//        binding?.viewFinderPreview?.afterMeasured {
+//            binding?.viewFinderPreview?.setOnTouchListener { _, event ->
+//                return@setOnTouchListener when (event.action) {
+//                    MotionEvent.ACTION_DOWN -> {
+//                        true
+//                    }
+//                    MotionEvent.ACTION_UP -> {
+//                        val factory: MeteringPointFactory = SurfaceOrientedMeteringPointFactory(
+//                            binding?.viewFinderPreview?.width?.toFloat(), binding?.viewFinderPreview?.height?.toFloat()
+//                        )
+//                        val autoFocusPoint = factory.createPoint(event.x, event.y)
+//                        try {
+//                            camera.cameraControl.startFocusAndMetering(
+//                                FocusMeteringAction.Builder(
+//                                    autoFocusPoint,
+//                                    FocusMeteringAction.FLAG_AF
+//                                ).apply {
+//                                    //focus only when the user tap the preview
+//                                    disableAutoCancel()
+//                                }.build()
+//                            )
+//                        } catch (e: CameraInfoUnavailableException) {
+//                            Log.d("ERROR", "cannot access camera", e)
+//                        }
+//                        true
+//                    }
+//                    else -> false // Unhandled event.
+//                }
+//            }
+//        }
+
 
         // Request Camera Permission
         if(allPermissionsGranted()){
@@ -73,34 +140,6 @@ class MainActivity : AppCompatActivity() {
             mediaDir else filesDir
     }
 
-//    private fun  saveFileToGallery(){
-//        ///storage/emulated/0/Sample Directory
-//        val file = File(Environment.getExternalStorageDirectory().toString() + "/Sample Directory")
-//        val success = true
-//        if(!file.exists()) {
-//            Toast.makeText(
-//                applicationContext,"Directory does not exist, create it",
-//                Toast.LENGTH_LONG).show();
-//        }
-//        if(success) {
-//            Toast.makeText(
-//                application,"Directory created",
-//                Toast.LENGTH_LONG).show();
-//        }
-//        else {
-//            Toast.makeText(this,"Failed to create Directory",
-//                Toast.LENGTH_LONG).show();
-//        }
-//    }
-//    private fun saveImageToGallery():File{
-//
-//        val values = ContentValues()
-//        values.put(Images.Media.DATE_TAKEN, System.currentTimeMillis())
-//        values.put(Images.Media.MIME_TYPE, "image/jpeg")
-//        values.put(MediaStore.MediaColumns.DATA, filePath)
-//
-//        context.getContentResolver().insert(Images.Media.EXTERNAL_CONTENT_URI, values)
-//    }
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
             baseContext, it) == PackageManager.PERMISSION_GRANTED
@@ -146,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    it.setSurfaceProvider(viewFinder.surfaceProvider)
+                    it.setSurfaceProvider(binding?.viewFinderPreview?.surfaceProvider)
                 }
 
             imageCapture = ImageCapture.Builder()
@@ -157,21 +196,46 @@ class MainActivity : AppCompatActivity() {
             // Select back camera as a default
 //            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
+
+
+
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
 
                 // Bind use cases to camera
-                cameraProvider.bindToLifecycle(this, lensFacing, preview, imageCapture);
+                 camera = cameraProvider.bindToLifecycle(this, lensFacing, preview, imageCapture);
 
 //                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
+                // auto focus functionality in every x seconds
+                binding?.viewFinderPreview?.afterMeasured {
+                    val autoFocusPoint = SurfaceOrientedMeteringPointFactory(1f, 1f)
+                        .createPoint(.5f, .5f)
+                    try {
+                        val autoFocusAction = FocusMeteringAction.Builder(
+                            autoFocusPoint,
+                            FocusMeteringAction.FLAG_AF
+                        ).apply {
+                            //start auto-focusing after 2 seconds
+                            setAutoCancelDuration(2, java.util.concurrent.TimeUnit.SECONDS)
+                        }.build()
+                        camera?.cameraControl?.startFocusAndMetering(autoFocusAction)
+                    } catch (e: CameraInfoUnavailableException) {
+                        Log.d("ERROR", "cannot access camera", e)
+                    }
+                }
+
+
 
             } catch(exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
 
         }, ContextCompat.getMainExecutor(this))
+
     }
+
+
 
    //    First, you define a configuration object that is used to instantiate the actual use case object
    //    Implement ImageCapture use case
@@ -208,4 +272,49 @@ class MainActivity : AppCompatActivity() {
 
    }
 
+    // tap to focus implementation
+    //    CameraX supports autofocus, but want to make the ability to manually control the focus target.
+
+
+//    fun onTouch(x:Float, y:Float) {
+//        val meteringPoint =  DisplayOrientedMeteringPointFactory(mSurfaceView.getDisplay(), cameraSelector, mSurfaceView.getWidth(), mSurfaceView.getHeight()).createPoint(x.y);
+//
+//        // Prepare focus action to be triggered.
+//        val action = FocusMeteringAction.Builder(meteringPoint).build();
+//
+//        // Execute focus action
+//        cameraControl.startFocusAndMetering(action);
+//    }
 }
+
+
+
+
+//    private fun  saveFileToGallery(){
+//        ///storage/emulated/0/Sample Directory
+//        val file = File(Environment.getExternalStorageDirectory().toString() + "/Sample Directory")
+//        val success = true
+//        if(!file.exists()) {
+//            Toast.makeText(
+//                applicationContext,"Directory does not exist, create it",
+//                Toast.LENGTH_LONG).show();
+//        }
+//        if(success) {
+//            Toast.makeText(
+//                application,"Directory created",
+//                Toast.LENGTH_LONG).show();
+//        }
+//        else {
+//            Toast.makeText(this,"Failed to create Directory",
+//                Toast.LENGTH_LONG).show();
+//        }
+//    }
+//    private fun saveImageToGallery():File{
+//
+//        val values = ContentValues()
+//        values.put(Images.Media.DATE_TAKEN, System.currentTimeMillis())
+//        values.put(Images.Media.MIME_TYPE, "image/jpeg")
+//        values.put(MediaStore.MediaColumns.DATA, filePath)
+//
+//        context.getContentResolver().insert(Images.Media.EXTERNAL_CONTENT_URI, values)
+//    }
