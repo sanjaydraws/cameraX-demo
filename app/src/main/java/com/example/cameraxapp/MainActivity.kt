@@ -3,12 +3,14 @@ package com.example.cameraxapp
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.icu.util.TimeUnit
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.view.Window
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -42,19 +44,8 @@ class MainActivity : AppCompatActivity() {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
 
-    //for on focus implementation
-//    val listener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-//        override fun onScale(detector: ScaleGestureDetector): Boolean {
-//            val scale = cameraControl.getZoomRatio.getValue() * detector.getScaleFactor()
-//        }
-//    }
-//    val scaleDetector = ScaleGestureDetector(this, listener)
-//
-//    override fun onTouchEvent(event: MotionEvent?): Boolean {
-//        //  // Let the ScaleGestureDetector inspect all events
-//        scaleDetector.onTouchEvent(event)
-//        return true
-//    }
+    //for zoom implementation
+
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -62,6 +53,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding?.root)
+        // status bar transparent
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        )
 
         binding?.apply {
             upperDownArrow.setOnClickListener {
@@ -74,36 +70,49 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-//        binding?.viewFinderPreview?.afterMeasured {
-//            binding?.viewFinderPreview?.setOnTouchListener { _, event ->
-//                return@setOnTouchListener when (event.action) {
-//                    MotionEvent.ACTION_DOWN -> {
-//                        true
-//                    }
-//                    MotionEvent.ACTION_UP -> {
-//                        val factory: MeteringPointFactory = SurfaceOrientedMeteringPointFactory(
-//                            binding?.viewFinderPreview?.width?.toFloat(), binding?.viewFinderPreview?.height?.toFloat()
-//                        )
-//                        val autoFocusPoint = factory.createPoint(event.x, event.y)
-//                        try {
-//                            camera.cameraControl.startFocusAndMetering(
-//                                FocusMeteringAction.Builder(
-//                                    autoFocusPoint,
-//                                    FocusMeteringAction.FLAG_AF
-//                                ).apply {
-//                                    //focus only when the user tap the preview
-//                                    disableAutoCancel()
-//                                }.build()
-//                            )
-//                        } catch (e: CameraInfoUnavailableException) {
-//                            Log.d("ERROR", "cannot access camera", e)
-//                        }
-//                        true
-//                    }
-//                    else -> false // Unhandled event.
-//                }
-//            }
-//        }
+        binding?.flash?.setOnClickListener {
+            // Get a cameraControl instance
+            val cameraControl = camera?.cameraControl
+
+            // Call enableTorch(), you can listen to the result to check whether it was successful
+            cameraControl?.enableTorch(true) // enable torch
+//            cameraControl?.enableTorch(false) // disbale torch
+        }
+        binding?.viewFinderPreview?.afterMeasured {
+            binding?.viewFinderPreview?.setOnTouchListener { _, event ->
+                return@setOnTouchListener when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        val width = binding?.viewFinderPreview?.width?.toFloat()
+                        val height = binding?.viewFinderPreview?.height?.toFloat()
+                        var factory: MeteringPointFactory ? =null
+                        if (width != null && height != null) {
+                                factory = SurfaceOrientedMeteringPointFactory(width , height)
+                            }
+
+                        val autoFocusPoint = factory?.createPoint(event.x, event.y) // to create point
+                        try {
+                            autoFocusPoint?.let { FocusMeteringAction.Builder(it, FocusMeteringAction.FLAG_AE)
+                                .apply {
+                                    //focus only when the user tap the preview
+                                    disableAutoCancel()
+                                }.build()
+                            }?.let {
+                                camera?.cameraControl?.startFocusAndMetering(
+                                    it
+                                )
+                            }
+                        } catch (e: CameraInfoUnavailableException) {
+                            Log.d("ERROR", "cannot access camera", e)
+                        }
+                        true
+                    }
+                    else -> false // Unhandled event.
+                }
+            }
+        }
 
 
         // Request Camera Permission
@@ -252,6 +261,10 @@ class MainActivity : AppCompatActivity() {
        //  OutputFileOptions object where u can specify things about how your output would be
        val outputOption = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
+       // flash on when image click
+       camera?.cameraControl?.enableTorch(true) // enable torch
+
+
        // set up image capture listener , which is triggered after photo has been taken
        imageCapture.takePicture(
            outputOption,
@@ -288,33 +301,3 @@ class MainActivity : AppCompatActivity() {
 }
 
 
-
-
-//    private fun  saveFileToGallery(){
-//        ///storage/emulated/0/Sample Directory
-//        val file = File(Environment.getExternalStorageDirectory().toString() + "/Sample Directory")
-//        val success = true
-//        if(!file.exists()) {
-//            Toast.makeText(
-//                applicationContext,"Directory does not exist, create it",
-//                Toast.LENGTH_LONG).show();
-//        }
-//        if(success) {
-//            Toast.makeText(
-//                application,"Directory created",
-//                Toast.LENGTH_LONG).show();
-//        }
-//        else {
-//            Toast.makeText(this,"Failed to create Directory",
-//                Toast.LENGTH_LONG).show();
-//        }
-//    }
-//    private fun saveImageToGallery():File{
-//
-//        val values = ContentValues()
-//        values.put(Images.Media.DATE_TAKEN, System.currentTimeMillis())
-//        values.put(Images.Media.MIME_TYPE, "image/jpeg")
-//        values.put(MediaStore.MediaColumns.DATA, filePath)
-//
-//        context.getContentResolver().insert(Images.Media.EXTERNAL_CONTENT_URI, values)
-//    }
