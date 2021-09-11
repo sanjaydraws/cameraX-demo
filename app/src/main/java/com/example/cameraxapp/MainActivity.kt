@@ -18,8 +18,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import com.example.cameraxapp.activities.BaseActivity
 import com.example.cameraxapp.databinding.ActivityMainBinding
 import com.example.cameraxapp.util.afterMeasured
+import com.example.cameraxapp.util.getOutputDirectory
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -31,12 +33,13 @@ import java.util.concurrent.Executors
 //add permission in manifest
 //<uses-feature android:name="android.hardware.camera.any" /> // // it makes sure that device has camera
 //<uses-permission android:name="android.permission.CAMERA" />
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseActivity() {
     var binding:ActivityMainBinding ? = null
     private var imageCapture: ImageCapture? = null
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
     var camera:Camera? = null
+    private var flash:Boolean? = null
     companion object {
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
@@ -44,20 +47,22 @@ class MainActivity : AppCompatActivity() {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
 
-    //for zoom implementation
-
-
-
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding?.root)
+    override fun initArguments() {
         // status bar transparent
         window.setFlags(
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         )
+
+//        implement the outputDirectory and cameraExecutor
+        outputDirectory = getOutputDirectory()
+        cameraExecutor = Executors.newSingleThreadExecutor()
+    }
+
+    override fun initViews() {
+    }
+
+    override fun setupListener() {
 
         binding?.apply {
             upperDownArrow.setOnClickListener {
@@ -70,14 +75,32 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
         binding?.flash?.setOnClickListener {
             // Get a cameraControl instance
             val cameraControl = camera?.cameraControl
 
+            if(binding?.flash?.isSelected == true){
+                flash = false
+                binding?.flash?.isSelected = false
+            }else{
+                flash = true
+                binding?.flash?.isSelected = true
+            }
             // Call enableTorch(), you can listen to the result to check whether it was successful
-            cameraControl?.enableTorch(true) // enable torch
+//            cameraControl?.enableTorch(true) // enable torch
 //            cameraControl?.enableTorch(false) // disbale torch
         }
+        // to take photo
+        binding?.cameraCaptureButton?.setOnClickListener {
+            takePhoto()
+        }
+        binding?.cameraSwitch?.setOnClickListener {
+            flipCamera()
+        }
+    }
+
+    override fun loadData() {
         binding?.viewFinderPreview?.afterMeasured {
             binding?.viewFinderPreview?.setOnTouchListener { _, event ->
                 return@setOnTouchListener when (event.action) {
@@ -89,8 +112,8 @@ class MainActivity : AppCompatActivity() {
                         val height = binding?.viewFinderPreview?.height?.toFloat()
                         var factory: MeteringPointFactory ? =null
                         if (width != null && height != null) {
-                                factory = SurfaceOrientedMeteringPointFactory(width , height)
-                            }
+                            factory = SurfaceOrientedMeteringPointFactory(width , height)
+                        }
 
                         val autoFocusPoint = factory?.createPoint(event.x, event.y) // to create point
                         try {
@@ -122,32 +145,28 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
 
         }
+    }
 
-        // to take photo
-        binding?.cameraCaptureButton?.setOnClickListener {
-            takePhoto()
-        }
-        binding?.cameraSwitch?.setOnClickListener {
-            flipCamera()
-        }
-//        implement the outputDirectory and cameraExecutor
-        outputDirectory = getOutputDirectory()
-        cameraExecutor = Executors.newSingleThreadExecutor()
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding?.root)
+
+        init()
 
     }
+
+
+
+
 
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
     }
 
-    private fun getOutputDirectory():File{
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply {
-                mkdir() } }
-        return if(mediaDir != null && mediaDir.exists())
-            mediaDir else filesDir
-    }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
@@ -262,7 +281,7 @@ class MainActivity : AppCompatActivity() {
        val outputOption = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
        // flash on when image click
-       camera?.cameraControl?.enableTorch(true) // enable torch
+       flash?.let { camera?.cameraControl?.enableTorch(it) } // enable torch
 
 
        // set up image capture listener , which is triggered after photo has been taken
